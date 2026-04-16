@@ -182,7 +182,7 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
 
             st.success(f"✅ Sucesso! {num_global - 1} provas corrigidas prontas para baixar a planilha com os resultados.")
             st.download_button(
-                label="📥 Baixar Planilha de Resultados",
+                label="📥 Baixar Planilha de Resultados em Excel",
                 data=final_output,
                 file_name="Resultados_Correção.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
