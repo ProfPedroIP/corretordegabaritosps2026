@@ -1,12 +1,8 @@
-import os
-
-readme_content = """# SCA - Sistema de Correção Automática (Projeto Super Perseu)
-
 ![Status](https://img.shields.io/badge/Status-Finalizado-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Framework-FF4B4B)
 
-O **SCA (Super Perseu)** é uma solução de Visão Computacional desenvolvida para automatizar a correção de gabaritos do Processo Seletivo do **Instituto Ponte**. O sistema processa arquivos PDF digitalizados, identifica as marcações dos candidatos e gera planilhas detalhadas com resultados por disciplina.
+O **Super Perseu** é uma solução de Visão Computacional desenvolvida para automatizar a correção de gabaritos do Processo Seletivo do **Instituto Ponte**. O sistema processa arquivos PDF digitalizados, identifica as marcações dos candidatos e gera planilhas detalhadas com resultados por disciplina.
 
 ---
 
