@@ -9,7 +9,7 @@ import tempfile
 import io
 
 # Configuração da página Web
-st.set_page_config(page_title="Correção Automática de Gabaritos - Instituto Ponte - PS 2026", page_icon="📝", layout="centered")
+st.set_page_config(page_title="Correção Automática de Gabaritos", page_icon="📝", layout="centered")
 
 # --- FUNÇÕES DE VISÃO COMPUTACIONAL ---
 def isolar_blocos_com_protecao(imagem_cv):
@@ -79,7 +79,7 @@ def ler_bolinhas(img_bloco, q_ini):
 
 # --- INTERFACE VISUAL DO SITE ---
 st.title("Correção Automática de Gabaritos")
-st.markdown("Bem-vindo ao sistema de correção das provas de Português e Matemática do **Instituto Ponte - PS 2026**")
+st.markdown("Bem-vindo ao sistema de correção das provas de Português e Matemática do Processo Seletivo 2026 do **Instituto Ponte**")
 
 # O Gabarito na tela e instruções
 st.subheader("1. Instruções e Gabarito")
@@ -180,7 +180,7 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
             wb.save(final_output)
             final_output.seek(0)
 
-            st.success(f"✅ Sucesso! {num_global - 1} provas corrigidas prontas para baixar a planilha com os resultados.")
+            st.success(f"✅ Sucesso! O Super Perseu corrigiu as {num_global - 1} provas e a planilha com os resultados está pronta para ser baixada!")
             st.download_button(
                 label="📥 Baixar Planilha de Resultados em Excel",
                 data=final_output,
