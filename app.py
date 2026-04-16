@@ -121,7 +121,7 @@ st.divider()
 st.subheader("2. Envio de Arquivos")
 arquivos_pdf = st.file_uploader("Arraste aqui o(s) PDF(s) digitalizado(s)", type=["pdf"], accept_multiple_files=True)
 
-if st.button("🚀 Iniciar Correção em Massa", type="primary"):
+if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
     if not arquivos_pdf:
         st.warning("Por favor, faça o upload de pelo menos um arquivo PDF.")
     elif not polo_escolhido:
