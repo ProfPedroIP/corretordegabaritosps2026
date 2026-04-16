@@ -99,7 +99,7 @@ serie_escolhida = c1.selectbox("Selecione a Série:", ["7º Ano", "8º Ano", "9�
 polo_escolhido = c2.text_input("Polo:", placeholder="Ex: Bela Cruz")
 
 # --- CADASTRO DO GABARITO DIVIDIDO POR MATÉRIA ---
-st.write("Preencha o Gabarito Oficial:")
+st.write("Preencha o Gabarito Correto para essa prova:")
 padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
@@ -176,8 +176,8 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
 
             # --- INSERÇÃO DA LINHA DO GABARITO OFICIAL (LINHA 2) ---
             ws.insert_rows(2)
-            ws.cell(row=2, column=1).value = "GABARITO ESPERADO"
-            ws.cell(row=2, column=1).font = Font(bold=True, color="0000FF")
+            ws.cell(row=2, column=1).value = "Gabarito Correto"
+            ws.cell(row=2, column=1).font = Font(bold=True)
             
             for q in range(1, 21):
                 cell = ws.cell(row=2, column=q+1)
