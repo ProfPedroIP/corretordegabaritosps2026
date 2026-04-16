@@ -79,12 +79,12 @@ def ler_bolinhas(img_bloco, q_ini):
 
 # --- INTERFACE VISUAL DO SITE ---
 st.title("Correção Automática de Gabaritos")
-st.markdown("Bem-vindo ao sistema de correção do **Instituto Ponte - PS 2026 - Prova de Português e Matemática**.")
+st.markdown("Bem-vindo ao sistema de correção das provas de Português e Matemática do **Instituto Ponte - PS 2026**")
 
 # O Gabarito na tela e instruções
-st.subheader("1. Gabarito Oficial")
-st.write("Verifique se as respostas padrão estão corretas antes de avançar.")
+st.subheader("1. Instruções e Gabarito")
 st.write("Digitalize os gabaritos de uma mesma turma utilizando o Adobe Scan e gere um arquivo em PDF.")
+st.write("Verifique se as respostas padrão estão corretas antes de avançar.")
 padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
@@ -99,12 +99,12 @@ for i in range(11, 21):
 st.divider()
 
 # A zona de upload dos PDFs
-st.subheader("2. Envio de Gabaritos")
-arquivos_pdf = st.file_uploader("Arraste os PDFs digitalizados para aqui", type=["pdf"], accept_multiple_files=True)
+st.subheader("2. Envio de Arquivos Digitalizados")
+arquivos_pdf = st.file_uploader("Arraste aqui o(s) PDF(s) digitalizado(s)", type=["pdf"], accept_multiple_files=True)
 
 if st.button("🚀 Iniciar Correção em Massa", type="primary"):
     if not arquivos_pdf:
-        st.warning("Por favor, faça o upload de pelo menos um PDF.")
+        st.warning("Por favor, faça o upload de pelo menos um arquivo PDF.")
     else:
         dados_consolidados = []
         num_global = 1
@@ -114,7 +114,7 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
         status_text = st.empty()
 
         for idx, file in enumerate(arquivos_pdf):
-            status_text.text(f"A processar lote {idx+1} de {len(arquivos_pdf)}...")
+            status_text.text(f"Processando lote {idx+1} de {len(arquivos_pdf)}...")
             
             # Guarda o PDF temporariamente para o nosso leitor conseguir abrir
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
@@ -139,13 +139,13 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
 
                     linha = {"Gabarito": f"Nº {num_global:04d}"}
                     for q in range(1, 21): linha[f"Q{q}"] = resp.get(q)
-                    linha["Acertos Português"] = acertos_pt
-                    linha["Acertos Matemática"] = acertos_mt
+                    linha["Português"] = acertos_pt
+                    linha["Matemática"] = acertos_mt
                     
                     dados_consolidados.append(linha)
                     num_global += 1
             except Exception as e:
-                st.error(f"Erro no ficheiro {file.name}.")
+                st.error(f"Erro no arquivo {file.name}.")
             
             progress_bar.progress((idx + 1) / len(arquivos_pdf))
 
@@ -180,7 +180,7 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
             wb.save(final_output)
             final_output.seek(0)
 
-            st.success(f"✅ Sucesso! {num_global - 1} provas corrigidas prontas para baixar.")
+            st.success(f"✅ Sucesso! {num_global - 1} provas corrigidas prontas para baixar a planilha com os resultados.")
             st.download_button(
                 label="📥 Baixar Planilha de Resultados",
                 data=final_output,
