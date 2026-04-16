@@ -154,7 +154,7 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
                         acertos_pt, acertos_mt = 0, 0
                         for q in range(1, 21): resp[q] = "ERRO_LEITURA"
 
-                    linha = {"Gabarito": f"Nº {num_global:04d}"}
+                    linha = {"Questão/Gabarito": f"Nº {num_global:04d}"}
                     for q in range(1, 21): linha[f"Q{q}"] = resp.get(q)
                     linha["Português"] = acertos_pt
                     linha["Matemática"] = acertos_mt
