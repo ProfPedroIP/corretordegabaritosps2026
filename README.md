@@ -33,8 +33,6 @@ O **Super Perseu** é uma solução de Visão Computacional desenvolvida para au
 ## 📂 Estrutura do Repositório
 
 ```text
-├── .streamlit/
-│   └── config.toml      # Configuração da identidade visual (Cores do Instituto Ponte)
 ├── app.py               # Código principal da aplicação
 ├── requirements.txt     # Dependências do Python
 ├── packages.txt         # Dependências do sistema (Poppler para leitura de PDF)
