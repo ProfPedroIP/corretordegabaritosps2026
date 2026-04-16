@@ -81,9 +81,10 @@ def ler_bolinhas(img_bloco, q_ini):
 st.title("Correção Automática de Gabaritos")
 st.markdown("Bem-vindo ao sistema de correção do **Instituto Ponte - PS 2026 - Prova de Português e Matemática**.")
 
-# O Gabarito na tela
+# O Gabarito na tela e instruções
 st.subheader("1. Gabarito Oficial")
 st.write("Verifique se as respostas padrão estão corretas antes de avançar.")
+st.write("Digitalize os gabaritos de uma mesma turma utilizando o Adobe Scan e gere um arquivo em PDF.")
 padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
