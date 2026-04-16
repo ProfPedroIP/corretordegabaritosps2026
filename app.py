@@ -192,4 +192,3 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 type="primary"
             )
-```
