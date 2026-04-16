@@ -13,7 +13,11 @@ st.set_page_config(page_title="Correção Automática de Gabaritos", page_icon="
 
 # --- EXIBIÇÃO DA LOGO ---
 URL_LOGO = "https://www.institutoponte.org.br/wp-content/uploads/2025/02/Logo-Instituto-Ponto.png"
-st.image(URL_LOGO, width=250)
+
+col1, col2, col3 = st.columns([1, 1, 1])
+
+with col2:
+    st.image(URL_LOGO, width=250)
 
 # --- FUNÇÕES DE VISÃO COMPUTACIONAL ---
 def isolar_blocos_com_protecao(imagem_cv):
