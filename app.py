@@ -89,7 +89,7 @@ st.markdown("Bem-vindo ao sistema de correção das provas de Português e Matem
 # Instruções
 with st.expander("📖 Leia as Instruções Importantes", expanded=True):
     st.write("1. Digitalize os gabaritos de uma mesma turma utilizando o **Adobe Scan** e gere um arquivo PDF.")
-    st.write("2. **Importante:** Este programa corrige e contabiliza as questões, mas **não lê nomes**. Os resultados seguem a ordem exata das páginas do PDF enviado.")
+    st.write("2. **Importante:** Este programa corrige e soma as questões corretas de acordo com o gabarito informado, mas **não lê nomes**. Os resultados seguem a ordem exata das páginas do PDF enviado.")
     st.write("3. **Dica:** Enumere fisicamente os gabaritos antes de escanear. O 'Gabarito Nº 0003' na planilha será exatamente o 3º papel que passou pelo digitalizador.")
 
 # Configurações da Prova
@@ -98,14 +98,19 @@ c1, c2 = st.columns(2)
 serie_escolhida = c1.selectbox("Selecione a Série:", ["7º Ano", "8º Ano", "9º Ano", "1ª Série", "2ª Série"])
 polo_escolhido = c2.text_input("Polo:", placeholder="Ex: Bela Cruz")
 
-# Definição do Gabarito
+# --- CADASTRO DO GABARITO DIVIDIDO POR MATÉRIA ---
 st.write("Preencha o Gabarito Oficial:")
 padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
+# Seção de Português
+st.markdown("#### 📚 Português (Questões 01 a 10)")
 cols = st.columns(10)
 for i in range(1, 11):
     gabarito_inputs[i] = cols[i-1].text_input(f"Q{i}", padrao[i-1], key=f"q{i}", max_chars=1).upper()
+
+# Seção de Matemática
+st.markdown("#### 📐 Matemática (Questões 11 a 20)")
 cols2 = st.columns(10)
 for i in range(11, 21):
     gabarito_inputs[i] = cols2[i-11].text_input(f"Q{i}", padrao[i-1], key=f"q{i}", max_chars=1).upper()
