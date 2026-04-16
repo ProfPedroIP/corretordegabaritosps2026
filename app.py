@@ -1,3 +1,8 @@
+Para inserir a logo mantendo a estrutura original do "Super Perseu", o comando `st.image` deve ser posicionado logo após a configuração da página e antes do título principal. 
+
+O bloco atualizado com a URL solicitada fica assim:
+
+```python
 import streamlit as st
 import cv2
 import numpy as np
@@ -10,6 +15,10 @@ import io
 
 # Configuração da página Web
 st.set_page_config(page_title="Correção Automática de Gabaritos", page_icon="📝", layout="centered")
+
+# --- EXIBIÇÃO DA LOGO ---
+URL_LOGO = "https://www.institutoponte.org.br/wp-content/uploads/2025/02/Logo-Instituto-Ponto.png"
+st.image(URL_LOGO, width=250)
 
 # --- FUNÇÕES DE VISÃO COMPUTACIONAL ---
 def isolar_blocos_com_protecao(imagem_cv):
@@ -84,7 +93,7 @@ st.markdown("Bem-vindo ao sistema de correção das provas de Português e Matem
 # O Gabarito na tela e instruções
 st.subheader("1. Instruções e Gabarito")
 st.write("Digitalize os gabaritos de uma mesma turma utilizando o Adobe Scan e gere um arquivo em PDF.")
-st.write("Verifique se as respostas padrão estão corretas antes de avançar.")
+st.write("Insira o gabarito com as respostas corretas antes de avançar.")
 padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
@@ -188,3 +197,4 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 type="primary"
             )
+```
