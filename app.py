@@ -1,8 +1,3 @@
-Para inserir a logo mantendo a estrutura original do "Super Perseu", o comando `st.image` deve ser posicionado logo após a configuração da página e antes do título principal. 
-
-O bloco atualizado com a URL solicitada fica assim:
-
-```python
 import streamlit as st
 import cv2
 import numpy as np
