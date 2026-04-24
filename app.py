@@ -14,7 +14,7 @@ import pytz
 # Configuração da página Web
 st.set_page_config(page_title="SCA - Instituto Ponte", page_icon="📝", layout="centered")
 
-# --- LOGO CENTRALIZADA ---
+# --- LOGO ---
 URL_LOGO = "https://www.institutoponte.org.br/wp-content/uploads/2025/02/Logo-Instituto-Ponto.png"
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
@@ -24,9 +24,12 @@ def isolar_blocos_com_protecao(imagem_cv):
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
     area_min, area_max = 800, 2000 
+    
+    # Para as âncoras, o cinza comum funciona perfeitamente
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
     _, binario = cv2.threshold(desfoque, 180, 255, cv2.THRESH_BINARY_INV) 
+    
     contornos, _ = cv2.findContours(binario, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     marcadores = []
     for c in contornos:
@@ -39,10 +42,12 @@ def isolar_blocos_com_protecao(imagem_cv):
                 cx, cy = x + (w//2), y + (h//2)
                 if cy > y_limite_superior:
                     marcadores.append([cx, cy])
+
     if len(marcadores) < 8: return None, None
     x_meio = largura_total / 2
     m_esq = [p for p in marcadores if p[0] < x_meio]
     m_dir = [p for p in marcadores if p[0] >= x_meio]
+    
     if len(m_esq) < 4 or len(m_dir) < 4: return None, None
 
     def ordenar_4(pts):
@@ -63,34 +68,25 @@ def isolar_blocos_com_protecao(imagem_cv):
     return processar(m_esq), processar(m_dir)
 
 def ler_bolinhas(img_bloco, q_ini):
-    # --- DETECÇÃO DE COR AZUL ---
-    hsv = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2HSV)
-    # Faixa de azul no espectro HSV
-    baixo_azul = np.array([90, 50, 50])
-    alto_azul = np.array([130, 255, 255])
-    mask_azul = cv2.inRange(hsv, baixo_azul, alto_azul)
-    pixels_azuis = cv2.countNonZero(mask_azul)
-
-    # Se detectar mais de 500 pixels azuis, ativa sensibilidade extra
-    if pixels_azuis > 500:
-        limite_dinamico = 0.20 # Sensibilidade maior para azul
-    else:
-        limite_dinamico = 0.30 # Seu limite padrão de 30%
-
-    cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
-    # Sensibilidade de cor em 225 conforme solicitado
-    _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
+    # No canal vermelho, o azul e o preto ficam escuros, facilitando a leitura.
+    canal_vermelho = img_bloco[:, :, 2]
+    
+    # Sensibilidade de cor em 225
+    _, binario = cv2.threshold(canal_vermelho, 210, 255, cv2.THRESH_BINARY_INV)
     
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
+    
+    # Limite de preenchimento em 0.27 (27%)
+    limite = 0.30
 
     for i in range(10): 
         marcadas = []
         for j in range(5): 
             cx, cy = xi + (j * px), yi + (i * py)
             celula = binario[cy-raio : cy+raio, cx-raio : cx+raio]
-            if celula.size > 0 and (cv2.countNonZero(celula) / celula.size) > limite_dinamico:
+            if celula.size > 0 and (cv2.countNonZero(celula) / celula.size) > limite:
                 marcadas.append(alts[j])
         
         if len(marcadas) == 0: respostas[q_ini+i] = "EM BRANCO"
@@ -155,6 +151,8 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             for p in range(1, total_pags + 1):
                 progress_bar.progress((num_global - 1) / total_geral_paginas)
                 status_text.text(f"Corrigindo Gabarito {num_global} de {total_geral_paginas}...")
+                
+                # DPI 300 para garantir que o Canal Vermelho tenha detalhe suficiente
                 pagina_imagem = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
                 img = cv2.cvtColor(np.array(pagina_imagem), cv2.COLOR_RGB2BGR)
                 del pagina_imagem 
@@ -225,5 +223,5 @@ st.markdown("---")
 fuso_br = pytz.timezone('America/Sao_Paulo')
 agora = datetime.now(fuso_br)
 data_hora_texto = agora.strftime("%d/%m/%Y às %H:%M:%S")
-st.caption(f"🚀 **Super Perseu v1.3.0** | Instituto Ponte")
+st.caption(f"🚀 **Super Perseu v1.4.0** | Instituto Ponte")
 st.caption(f"📅 Relatório gerado em: {data_hora_texto}")
