@@ -78,7 +78,7 @@ def ler_bolinhas(img_bloco, q_ini):
     
     # 3. Limiarização Adaptativa: Ignora sombras e variações de luz no papel
     binario = cv2.adaptiveThreshold(img_norm, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                     cv2.THRESH_BINARY_INV, 50, 5)
+                                     cv2.THRESH_BINARY_INV, 49, 7)
     
     # 4. Dilatação: Engorda os traços finos para garantir a leitura
     kernel = np.ones((3,3), np.uint8)
