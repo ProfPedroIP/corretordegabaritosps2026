@@ -82,7 +82,7 @@ def ler_bolinhas(img_bloco, q_ini):
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
     # 3. Limite de 25% (0.25): Equilíbrio ideal para 300 DPI
-    limite = 0.20
+    limite = 0.18
 
     for i in range(10): 
         marcadas = []
@@ -224,4 +224,4 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
 st.markdown("---")
 fuso_br = pytz.timezone('America/Sao_Paulo')
 agora = datetime.now(fuso_br)
-st.caption(f"🚀 **Super Perseu v1.9.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
+st.caption(f"🚀 **Super Perseu v2.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
