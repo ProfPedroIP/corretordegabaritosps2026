@@ -12,23 +12,24 @@ import gc
 # Configuração da página Web
 st.set_page_config(page_title="SCA - Instituto Ponte", page_icon="📝", layout="centered")
 
+# --- LOGO ---
 URL_LOGO = "https://www.institutoponte.org.br/wp-content/uploads/2025/02/Logo-Instituto-Ponto.png"
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     st.image(URL_LOGO, width=250)
 
 def isolar_blocos_com_protecao(imagem_cv):
-    """Localiza os 8 quadrados âncora para alinhar a prova"""
+    """Localiza os 8 quadrados âncora com maior tolerância"""
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
     
-    # Margem de área elástica para evitar 
-    area_min, area_max = 900, 1500
+    # Margem de área ampliada para detectar âncoras mesmo com zoom ou distância diferente
+    area_min, area_max = 700, 2000 
     
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
     
-    # Sensibilidade das âncoras
+    # Sensibilidade das âncoras ajustada para 180 (padrão estável)
     _, binario = cv2.threshold(desfoque, 180, 255, cv2.THRESH_BINARY_INV) 
     
     contornos, _ = cv2.findContours(binario, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -40,12 +41,14 @@ def isolar_blocos_com_protecao(imagem_cv):
         area = cv2.contourArea(c)
         if len(aprox) == 4 and area_min <= area <= area_max:
             x, y, w, h = cv2.boundingRect(aprox)
-            if 0.6 <= (w / float(h)) <= 1.4:
+            if 0.5 <= (w / float(h)) <= 1.5: # Mais tolerante a distorções de inclinação
                 cx, cy = x + (w//2), y + (h//2)
                 if cy > y_limite_superior:
                     marcadores.append([cx, cy])
 
     if len(marcadores) < 8: return None, None
+    
+    # Separação Esquerda/Direita com margem de segurança
     x_meio = largura_total / 2
     m_esq = [p for p in marcadores if p[0] < x_meio]
     m_dir = [p for p in marcadores if p[0] >= x_meio]
@@ -70,18 +73,18 @@ def isolar_blocos_com_protecao(imagem_cv):
     return processar(m_esq), processar(m_dir)
 
 def ler_bolinhas(img_bloco, q_ini):
-    """Analisa o preenchimento das alternativas"""
+    """Analisa o preenchimento com sensibilidade ajustada"""
     cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
     
-    # SENSIBILIDADE DA BOLINHA:
-    _, binario = cv2.threshold(cinza, 180, 255, cv2.THRESH_BINARY_INV)
+    # AJUSTE: Sensibilidade em 225 para enxergar canetas claras/lápis
+    _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
     
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
-    # LIMITE DE PREENCHIMENTO:
-    limite = 0.30
+    # AJUSTE: Limite em 0.27 (27%) conforme solicitado
+    limite = 0.27
 
     for i in range(10): 
         marcadas = []
@@ -96,7 +99,7 @@ def ler_bolinhas(img_bloco, q_ini):
         else: respostas[q_ini+i] = marcadas[0]
     return respostas
 
-# INTERFACE
+# --- INTERFACE ---
 st.title("Correção Automática de Gabaritos")
 st.markdown("Sistema de correção oficial do Processo Seletivo 2026 do **Instituto Ponte**")
 
@@ -111,18 +114,17 @@ serie_escolhida = c1.selectbox("Selecione a Série:", ["7º Ano", "8º Ano", "9�
 polo_escolhido = c2.text_input("Polo:", placeholder="Ex: Bela Cruz")
 
 st.divider()
-padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
 st.markdown("#### 📚 Português (Questões 01 a 10)")
 cols_pt = st.columns(10)
 for i in range(1, 11):
-    gabarito_inputs[i] = cols_pt[i-1].text_input(f"Q{i}", padrao[i-1], key=f"q{i}", max_chars=1).upper()
+    gabarito_inputs[i] = cols_pt[i-1].text_input(f"Q{i}", "A", key=f"q{i}", max_chars=1).upper()
 
 st.markdown("#### 📐 Matemática (Questões 11 a 20)")
 cols_mt = st.columns(10)
 for i in range(11, 21):
-    gabarito_inputs[i] = cols_mt[i-11].text_input(f"Q{i}", padrao[i-1], key=f"q{i}", max_chars=1).upper()
+    gabarito_inputs[i] = cols_mt[i-11].text_input(f"Q{i}", "A", key=f"q{i}", max_chars=1).upper()
 
 st.divider()
 st.subheader("2. Envio de Arquivos")
@@ -134,10 +136,9 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
     elif not polo_escolhido:
         st.error("Preencha o campo 'Polo'.")
     else:
-        # Pré-contagem para barra de progresso suave
         total_geral_paginas = 0
         arquivos_info = []
-        with st.spinner("Preparando lotes..."):
+        with st.spinner("Contabilizando gabaritos..."):
             for file in arquivos_pdf:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     tmp.write(file.read())
@@ -153,11 +154,10 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
 
         for tmp_path, nome_file, total_pags in arquivos_info:
             for p in range(1, total_pags + 1):
-                # Atualiza barra de progresso por página
                 progress_bar.progress((num_global - 1) / total_geral_paginas)
                 status_text.text(f"Corrigindo Gabarito {num_global} de {total_geral_paginas}...")
                 
-                # DPI 300 para precisão milimétrica página por página
+                # DPI 300 para máxima precisão
                 pagina_imagem = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
                 img = cv2.cvtColor(np.array(pagina_imagem), cv2.COLOR_RGB2BGR)
                 del pagina_imagem 
@@ -201,7 +201,6 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                 c.font = Font(bold=True)
                 c.alignment = Alignment(horizontal="center")
 
-            # Formatação de cores
             C_ACERTO = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
             C_ERRO = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
             C_ANULADA = PatternFill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
