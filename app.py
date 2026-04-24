@@ -11,7 +11,7 @@ import gc
 from datetime import datetime
 import pytz
 
-# --- CONFIGURAÇÃO ---
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="SCA - Instituto Ponte", page_icon="📝", layout="centered")
 
 # --- LOGO ---
@@ -21,12 +21,11 @@ with col2:
     st.image(URL_LOGO, width=250)
 
 def isolar_blocos_simples(imagem_binaria):
-    """Localiza as âncoras usando a imagem já binarizada"""
+    """Localiza as âncoras na imagem binarizada de alta sensibilidade"""
     altura_total, largura_total = imagem_binaria.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
-    area_min, area_max = 900, 1600 
+    area_min, area_max = 800, 1600 
     
-    # Como a imagem já vem binarizada e com contraste, apenas aplicamos um leve desfoque para limpar
     desfoque = cv2.GaussianBlur(imagem_binaria, (3, 3), 0)
     contornos, _ = cv2.findContours(desfoque, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
@@ -37,7 +36,7 @@ def isolar_blocos_simples(imagem_binaria):
         area = cv2.contourArea(c)
         if len(aprox) == 4 and area_min <= area <= area_max:
             x, y, w, h = cv2.boundingRect(aprox)
-            if 0.7 <= (w / float(h)) <= 1.3:
+            if 0.6 <= (w / float(h)) <= 1.4:
                 cx, cy = x + (w//2), y + (h//2)
                 if cy > y_limite_superior:
                     marcadores.append([cx, cy])
@@ -67,13 +66,10 @@ def isolar_blocos_simples(imagem_binaria):
     return processar(m_esq), processar(m_dir)
 
 def ler_bolinhas_simples(img_binaria_bloco, q_ini):
-    """Lê as bolinhas na imagem que já está em preto e branco"""
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
-    
-    # Limite
-    limite = 0.30
+    limite = 0.27
 
     for i in range(10): 
         marcadas = []
@@ -90,7 +86,11 @@ def ler_bolinhas_simples(img_binaria_bloco, q_ini):
 
 # --- INTERFACE ---
 st.title("Correção Automática de Gabaritos")
-st.markdown("Processo Seletivo - Instituto Ponte 2026")
+
+with st.expander("📖 Instruções de Uso", expanded=True):
+    st.write("1. Use o **Adobe Scan** para gerar os PDFs.")
+    st.write("2. O programa **não lê nomes**. Os resultados seguem a ordem física das páginas.")
+    st.write("3. Enumere fisicamente os gabaritos para referência na planilha.")
 
 st.subheader("1. Identificação e Gabarito")
 c1, c2 = st.columns(2)
@@ -113,43 +113,43 @@ for i in range(11, 21):
 st.divider()
 arquivos_pdf = st.file_uploader("Arraste os PDFs aqui", type=["pdf"], accept_multiple_files=True)
 
-if st.button("🚀 Iniciar Correção", type="primary"):
+if st.button("🚀 Executar Correção", type="primary"):
     if not arquivos_pdf or not polo_escolhido:
         st.error("Preencha todos os campos e envie o PDF.")
     else:
         total_pags = 0
         arquivos_info = []
-        for file in arquivos_pdf:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                tmp.write(file.read())
-                tmp_path = tmp.name
-                total_pags += pdfinfo_from_path(tmp_path)["Pages"]
-                arquivos_info.append((tmp_path, pdfinfo_from_path(tmp_path)["Pages"]))
+        with st.spinner("Contabilizando páginas..."):
+            for file in arquivos_pdf:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(file.read())
+                    tmp_path = tmp.name
+                    info = pdfinfo_from_path(tmp_path)
+                    total_pags += info["Pages"]
+                    arquivos_info.append((tmp_path, info["Pages"]))
 
-        dados = []
+        dados_consolidados = []
         num_global = 1
-        bar = st.progress(0)
-        status = st.empty()
+        progress_bar = st.progress(0)
+        status_text = st.empty()
 
         for tmp_path, pags_no_file in arquivos_info:
             for p in range(1, pags_no_file + 1):
-                bar.progress((num_global - 1) / total_pags)
-                status.text(f"Processando Gabarito {num_global}...")
+                progress_bar.progress((num_global - 1) / total_pags)
+                status_text.text(f"Corrigindo Gabarito {num_global} de {total_pags}...")
                 
-                # 1. Converte PDF para Imagem
+                # 1. Conversão PDF para Imagem
                 pag_pil = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
                 img = cv2.cvtColor(np.array(pag_pil), cv2.COLOR_RGB2BGR)
                 
-                # 2. AUMENTA CONTRASTE E BRILHO (Simplificado)
-                # Alpha 1.5 (Contraste), Beta 0 (Brilho)
-                img_enhanced = cv2.convertScaleAbs(img, alpha=1.5, beta=0)
+                # 2. Aumento de Contraste e Redução de Brilho
+                img_enhanced = cv2.convertScaleAbs(img, alpha=1.8, beta=-5)
                 
-                # 3. FORÇA PRETO E BRANCO (Binarização Global)
+                # 3. Binarização Global Agressiva
                 cinza = cv2.cvtColor(img_enhanced, cv2.COLOR_BGR2GRAY)
-                # Threshold:
-                _, binario = cv2.threshold(cinza, 200, 255, cv2.THRESH_BINARY_INV)
+                _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
                 
-                # 4. Isola e Lê
+                # 4. Processamento
                 bloco_e, bloco_d = isolar_blocos_simples(binario)
                 resp = {}
                 if bloco_e is not None and bloco_d is not None:
@@ -163,21 +163,63 @@ if st.button("🚀 Iniciar Correção", type="primary"):
 
                 linha = {"Questão/Gabarito": f"Nº {num_global:04d}"}
                 for q in range(1, 21): linha[f"Q{q}"] = resp.get(q)
-                linha["Português"], linha["Matemática"] = ac_pt, ac_mt
-                dados.append(linha)
+                linha["Português"] = ac_pt
+                linha["Matemática"] = ac_mt
+                dados_consolidados.append(linha)
                 num_global += 1
                 gc.collect()
 
-        bar.progress(1.0)
-        if dados:
-            df = pd.DataFrame(dados)
+        progress_bar.progress(1.0)
+        if dados_consolidados:
+            # Exportando para Excel com Openpyxl para formatação
+            df = pd.DataFrame(dados_consolidados)
             output = io.BytesIO()
             df.to_excel(output, index=False)
             output.seek(0)
-            st.success("Concluído!")
-            st.download_button("📥 Baixar Planilha", output, f"Resultados_{polo_escolhido}.xlsx", type="primary")
+            
+            wb = load_workbook(output)
+            ws = wb.active
+            
+            # --- Inserção do Gabarito Esperado (Linha 2) ---
+            ws.insert_rows(2)
+            ws.cell(row=2, column=1).value = "Gabarito Correto"
+            ws.cell(row=2, column=1).font = Font(bold=True, color="0000FF")
+            for q in range(1, 21):
+                c = ws.cell(row=2, column=q+1)
+                c.value = gabarito_inputs[q]
+                c.font = Font(bold=True)
+                c.alignment = Alignment(horizontal="center")
+
+            # --- Formatação de Cores ---
+            C_ACERTO = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+            C_ERRO = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+            C_ANULADA = PatternFill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
+
+            for row in range(3, ws.max_row + 1):
+                for col in range(2, 22):
+                    cell = ws.cell(row=row, column=col)
+                    q_idx = col - 1
+                    esperado = gabarito_inputs[q_idx]
+                    if cell.value == esperado: cell.fill = C_ACERTO
+                    elif cell.value == "ANULADA": cell.fill = C_ANULADA
+                    elif cell.value not in ["EM BRANCO", "ERRO_LEITURA"]: cell.fill = C_ERRO
+
+            final_out = io.BytesIO()
+            wb.save(final_out)
+            final_out.seek(0)
+            
+            status_text.empty()
+            st.success(f"✅ Sucesso! {len(dados_consolidados)} gabaritos corrigidos.")
+            st.download_button(
+                label="📥 Baixar Planilha Final",
+                data=final_out,
+                file_name=f"Resultados - {serie_escolhida} - {polo_escolhido}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary"
+            )
 
 # --- RODAPÉ ---
 st.markdown("---")
-fuso = pytz.timezone('America/Sao_Paulo')
-st.caption(f"🚀 Super Perseu v3.0 | Gerado em: {datetime.now(fuso).strftime('%d/%m/%Y %H:%M')}")
+fuso_br = pytz.timezone('America/Sao_Paulo')
+agora = datetime.now(fuso_br)
+st.caption(f"🚀 **Super Perseu v3.2** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
