@@ -88,8 +88,8 @@ def ler_bolinhas(img_bloco, q_ini):
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
-    # 5. Limite de 20% (0.20): Capta um 'X' ou risco leve com segurança
-    limite = 0.20
+    # 5. Limite
+    limite = 0.30
 
     for i in range(10): 
         marcadas = []
