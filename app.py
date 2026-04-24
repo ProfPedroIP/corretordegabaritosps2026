@@ -72,7 +72,7 @@ def ler_bolinhas(bloco_cinza, q_ini):
     _, bloco_bin = cv2.threshold(bloco_cinza, 220, 255, cv2.THRESH_BINARY_INV)
     
     res = {}
-    xi, yi, px, py, r, lim = 89, 78, 110, 104, 31, 0.25
+    xi, yi, px, py, r, lim = 89, 78, 110, 104, 31, 0.30
     for i in range(10):
         marcadas = []
         for j in range(5):
