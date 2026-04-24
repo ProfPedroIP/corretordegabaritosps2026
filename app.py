@@ -23,7 +23,7 @@ with col2:
 def isolar_blocos_com_protecao(imagem_cv):
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
-    area_min, area_max = 800, 2000 
+    area_min, area_max = 900, 1600 
     
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
@@ -67,24 +67,22 @@ def isolar_blocos_com_protecao(imagem_cv):
     return processar(m_esq), processar(m_dir)
 
 def ler_bolinhas(img_bloco, q_ini):
-    """Nova Lógica v1.6: Contraste Adaptativo para canetas claras"""
-    # 1. Pega o canal mais escuro (Min-Channel)
+    """v1.8: Motor de Limiarização Adaptativa - O terror da caneta azul clara"""
+    # 1. Pegamos o canal mínimo para dar o primeiro destaque no azul
     b, g, r = cv2.split(img_bloco)
     img_min = cv2.min(cv2.min(b, g), r)
     
-    # 2. APLICA CLAHE: Isso força o contraste em áreas claras (faz o azul 'gritar')
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-    img_contrastada = clahe.apply(img_min)
-    
-    # 3. Threshold com sensibilidade alta
-    _, binario = cv2.threshold(img_contrastada, 215, 255, cv2.THRESH_BINARY_INV)
+    # 2. Em vez de Threshold fixo ou CLAHE, usamos o Adaptativo. 
+    # Ele detecta o que é 'tinta' comparando o pixel com o fundo ao redor dele.
+    binario = cv2.adaptiveThreshold(img_min, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                     cv2.THRESH_BINARY_INV, 51, 15)
     
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
-    # 4. Limite de área baixado para 0.15 (15%) para captar riscos finos
-    limite = 0.30
+    # 3. Limite de 25% (0.25): Equilíbrio ideal para 300 DPI
+    limite = 0.25
 
     for i in range(10): 
         marcadas = []
@@ -138,7 +136,7 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
     else:
         total_geral_paginas = 0
         arquivos_info = []
-        with st.spinner("Preparando correção..."):
+        with st.spinner("Contabilizando gabaritos..."):
             for file in arquivos_pdf:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     tmp.write(file.read())
@@ -213,7 +211,7 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             wb.save(final_out)
             final_out.seek(0)
             status_text.empty()
-            st.success(f"✅ Sucesso! {len(dados_consolidados)} gabaritos processados.")
+            st.success(f"✅ Sucesso! {len(dados_consolidados)} gabaritos corrigidos.")
             st.download_button(
                 label="📥 Baixar Planilha",
                 data=final_out,
@@ -226,4 +224,4 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
 st.markdown("---")
 fuso_br = pytz.timezone('America/Sao_Paulo')
 agora = datetime.now(fuso_br)
-st.caption(f"🚀 **Super Perseu v1.7.0** | Instituto Ponte | App modificado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
+st.caption(f"🚀 **Super Perseu v1.8.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
