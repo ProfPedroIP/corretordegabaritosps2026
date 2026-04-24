@@ -11,7 +11,7 @@ import gc
 from datetime import datetime
 import pytz
 
-# Configuração da página Web
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="SCA - Instituto Ponte", page_icon="📝", layout="centered")
 
 # --- LOGO ---
@@ -21,9 +21,10 @@ with col2:
     st.image(URL_LOGO, width=250)
 
 def isolar_blocos_com_protecao(imagem_cv):
+    """Localiza os 8 quadrados âncora para alinhar a prova"""
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
-    area_min, area_max = 900, 1600 
+    area_min, area_max = 800, 2000 
     
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
@@ -67,22 +68,28 @@ def isolar_blocos_com_protecao(imagem_cv):
     return processar(m_esq), processar(m_dir)
 
 def ler_bolinhas(img_bloco, q_ini):
-    """v1.8: Motor de Limiarização Adaptativa - O terror da caneta azul clara"""
-    # 1. Pegamos o canal mínimo para dar o primeiro destaque no azul
+    """Visão de Contraste Extremo para canetas azuis claras e traços finos"""
+    # 1. Min-Channel para forçar o azul a virar preto
     b, g, r = cv2.split(img_bloco)
     img_min = cv2.min(cv2.min(b, g), r)
     
-    # 2. Em vez de Threshold fixo ou CLAHE, usamos o Adaptativo. 
-    # Ele detecta o que é 'tinta' comparando o pixel com o fundo ao redor dele.
-    binario = cv2.adaptiveThreshold(img_min, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                     cv2.THRESH_BINARY_INV, 51, 15)
+    # 2. Normalização: Estica o contraste (o azul claro vira preto absoluto)
+    img_norm = cv2.normalize(img_min, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+    
+    # 3. Limiarização Adaptativa: Ignora sombras e variações de luz no papel
+    binario = cv2.adaptiveThreshold(img_norm, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                     cv2.THRESH_BINARY_INV, 45, 12)
+    
+    # 4. Dilatação: Engorda os traços finos para garantir a leitura
+    kernel = np.ones((3,3), np.uint8)
+    binario = cv2.dilate(binario, kernel, iterations=1)
     
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
-    # 3. Limite de 25% (0.25): Equilíbrio ideal para 300 DPI
-    limite = 0.25
+    # 5. Limite de 20% (0.20): Capta um 'X' ou risco leve com segurança
+    limite = 0.20
 
     for i in range(10): 
         marcadas = []
@@ -134,9 +141,10 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
     elif not polo_escolhido:
         st.error("Preencha o campo 'Polo'.")
     else:
+        # Pré-contagem para progresso preciso
         total_geral_paginas = 0
         arquivos_info = []
-        with st.spinner("Contabilizando gabaritos..."):
+        with st.spinner("Calculando volume de trabalho..."):
             for file in arquivos_pdf:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     tmp.write(file.read())
@@ -152,9 +160,11 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
 
         for tmp_path, nome_file, total_pags in arquivos_info:
             for p in range(1, total_pags + 1):
+                # Atualização da barra página por página
                 progress_bar.progress((num_global - 1) / total_geral_paginas)
                 status_text.text(f"Corrigindo Gabarito {num_global} de {total_geral_paginas}...")
                 
+                # Processamento a 300 DPI (Estabilidade garantida pela leitura unitária)
                 pagina_imagem = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
                 img = cv2.cvtColor(np.array(pagina_imagem), cv2.COLOR_RGB2BGR)
                 del pagina_imagem 
@@ -186,6 +196,8 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             output.seek(0)
             wb = load_workbook(output)
             ws = wb.active
+            
+            # Linha do Gabarito Oficial
             ws.insert_rows(2)
             ws.cell(row=2, column=1).value = "Gabarito Correto"
             ws.cell(row=2, column=1).font = Font(bold=True, color="0000FF")
@@ -195,6 +207,7 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                 c.font = Font(bold=True)
                 c.alignment = Alignment(horizontal="center")
 
+            # Formatação de cores
             C_ACERTO = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
             C_ERRO = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
             C_ANULADA = PatternFill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
@@ -213,15 +226,15 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             status_text.empty()
             st.success(f"✅ Sucesso! {len(dados_consolidados)} gabaritos corrigidos.")
             st.download_button(
-                label="📥 Baixar Planilha",
+                label="📥 Baixar Planilha de Resultados",
                 data=final_out,
                 file_name=f"Resultados - {serie_escolhida} - {polo_escolhido}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 type="primary"
             )
 
-# --- RODAPÉ ---
+# --- RODAPÉ COM DATA E HORA ---
 st.markdown("---")
 fuso_br = pytz.timezone('America/Sao_Paulo')
 agora = datetime.now(fuso_br)
-st.caption(f"🚀 **Super Perseu v2.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
+st.caption(f"🚀 **Super Perseu v2.2.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
