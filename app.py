@@ -224,4 +224,4 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
 st.markdown("---")
 fuso_br = pytz.timezone('America/Sao_Paulo')
 agora = datetime.now(fuso_br)
-st.caption(f"🚀 **Super Perseu v1.8.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
+st.caption(f"🚀 **Super Perseu v1.9.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
