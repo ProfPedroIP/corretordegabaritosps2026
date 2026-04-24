@@ -14,14 +14,13 @@ import pytz
 # Configuração da página Web
 st.set_page_config(page_title="SCA - Instituto Ponte", page_icon="📝", layout="centered")
 
-# --- LOGO CENTRALIZADA ---
+# --- LOGO ---
 URL_LOGO = "https://www.institutoponte.org.br/wp-content/uploads/2025/02/Logo-Instituto-Ponto.png"
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     st.image(URL_LOGO, width=250)
 
 def isolar_blocos_com_protecao(imagem_cv):
-    """Localiza as âncoras para alinhar a prova"""
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
     area_min, area_max = 800, 2000 
@@ -68,20 +67,24 @@ def isolar_blocos_com_protecao(imagem_cv):
     return processar(m_esq), processar(m_dir)
 
 def ler_bolinhas(img_bloco, q_ini):
-    """Analisa preenchimento usando o canal mais escuro (ideal para azul claro)"""
-    # Separa os canais e pega o mínimo (força o azul a virar preto)
+    """Nova Lógica v1.6: Contraste Adaptativo para canetas claras"""
+    # 1. Pega o canal mais escuro (Min-Channel)
     b, g, r = cv2.split(img_bloco)
     img_min = cv2.min(cv2.min(b, g), r)
     
-    # Threshold estável para evitar ruído de fundo
-    _, binario = cv2.threshold(img_min, 200, 255, cv2.THRESH_BINARY_INV)
+    # 2. APLICA CLAHE: Isso força o contraste em áreas claras (faz o azul 'gritar')
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    img_contrastada = clahe.apply(img_min)
+    
+    # 3. Threshold com sensibilidade alta
+    _, binario = cv2.threshold(img_contrastada, 215, 255, cv2.THRESH_BINARY_INV)
     
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
-    # Limite de 20% para captar marcações leves de canetas esferográficas
-    limite = 0.20
+    # 4. Limite de área baixado para 0.15 (15%) para captar riscos finos
+    limite = 0.15
 
     for i in range(10): 
         marcadas = []
@@ -96,7 +99,7 @@ def ler_bolinhas(img_bloco, q_ini):
         else: respostas[q_ini+i] = marcadas[0]
     return respostas
 
-# --- INTERFACE STREAMLIT ---
+# --- INTERFACE ---
 st.title("Correção Automática de Gabaritos")
 st.markdown("Sistema de correção oficial do Processo Seletivo 2026 do **Instituto Ponte**")
 
@@ -135,7 +138,7 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
     else:
         total_geral_paginas = 0
         arquivos_info = []
-        with st.spinner("Analisando volume de trabalho..."):
+        with st.spinner("Preparando correção..."):
             for file in arquivos_pdf:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     tmp.write(file.read())
@@ -154,7 +157,6 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                 progress_bar.progress((num_global - 1) / total_geral_paginas)
                 status_text.text(f"Corrigindo Gabarito {num_global} de {total_geral_paginas}...")
                 
-                # Processamento a 300 DPI página por página
                 pagina_imagem = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
                 img = cv2.cvtColor(np.array(pagina_imagem), cv2.COLOR_RGB2BGR)
                 del pagina_imagem 
@@ -211,7 +213,7 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             wb.save(final_out)
             final_out.seek(0)
             status_text.empty()
-            st.success(f"✅ Sucesso! {len(dados_consolidados)} provas processadas.")
+            st.success(f"✅ Sucesso! {len(dados_consolidados)} gabaritos processados.")
             st.download_button(
                 label="📥 Baixar Planilha",
                 data=final_out,
@@ -220,8 +222,8 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                 type="primary"
             )
 
-# --- RODAPÉ COM DATA E HORA ---
+# --- RODAPÉ ---
 st.markdown("---")
 fuso_br = pytz.timezone('America/Sao_Paulo')
 agora = datetime.now(fuso_br)
-st.caption(f"🚀 **Super Perseu v1.5.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
+st.caption(f"🚀 **Super Perseu v1.6.0** | Instituto Ponte | Gerado em: {agora.strftime('%d/%m/%Y às %H:%M:%S')}")
