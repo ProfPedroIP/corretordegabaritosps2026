@@ -2,12 +2,11 @@ import streamlit as st
 import cv2
 import numpy as np
 import pandas as pd
-from pdf2image import convert_from_path, pdfinfo_from_path 
+from pdf2image import convert_from_path
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import tempfile
 import io
-import gc 
 
 # Configuração da página Web
 st.set_page_config(page_title="Corretor de gabaritos", page_icon="📝", layout="centered")
@@ -21,7 +20,7 @@ with col2:
 def isolar_blocos_com_protecao(imagem_cv):
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
-    area_min, area_max = 1100, 1400 
+    area_min, area_max = 1000, 1300
     
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
@@ -65,10 +64,10 @@ def isolar_blocos_com_protecao(imagem_cv):
 
 def ler_bolinhas(img_bloco, q_ini):
     cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
-    _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
+    _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
-    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.30
+    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.35
 
     for i in range(10): 
         marcadas = []
@@ -85,27 +84,32 @@ def ler_bolinhas(img_bloco, q_ini):
 
 # --- INTERFACE VISUAL DO SITE ---
 st.title("Correção Automática de Gabaritos")
-st.markdown("Sistema de correção oficial do Processo Seletivo 2026 do **Instituto Ponte**")
+st.markdown("Bem-vindo ao sistema de correção das provas de Português e Matemática do Processo Seletivo 2026 do **Instituto Ponte**")
 
+# Instruções
 with st.expander("📖 Leia as Instruções Importantes", expanded=True):
-    st.write("1. Digitalize os gabaritos utilizando o **Adobe Scan** e gere um arquivo PDF.")
-    st.write("2. **Importante:** Este programa não lê nomes. Os resultados seguem a ordem exata das páginas do PDF.")
-    st.write("3. **Dica:** Enumere fisicamente os gabaritos antes de escanear.")
+    st.write("1. Digitalize os gabaritos de uma mesma turma utilizando o **Adobe Scan** e gere um arquivo PDF.")
+    st.write("2. **Importante:** Este programa corrige e soma as questões corretas de acordo com o gabarito informado, mas **não lê nomes**. Os resultados seguem a ordem exata das páginas do PDF enviado.")
+    st.write("3. **Dica:** Enumere fisicamente os gabaritos antes de escanear. O 'Gabarito Nº 0003' na planilha será exatamente o 3º papel que passou pelo digitalizador.")
 
+# Configurações da Prova
 st.subheader("1. Identificação e Gabarito")
 c1, c2 = st.columns(2)
 serie_escolhida = c1.selectbox("Selecione a Série:", ["7º Ano", "8º Ano", "9º Ano", "1ª Série", "2ª Série"])
 polo_escolhido = c2.text_input("Polo:", placeholder="Ex: Bela Cruz")
 
-st.write("Preencha o Gabarito Correto para essa prova:")
+# --- CADASTRO DO GABARITO DIVIDIDO POR MATÉRIA ---
+st.write("Preencha o Gabarito Oficial:")
 padrao = "A B C D E A B C D E A B C D E A B C D E".split()
 gabarito_inputs = {}
 
+# Seção de Português
 st.markdown("#### 📚 Português (Questões 01 a 10)")
 cols = st.columns(10)
 for i in range(1, 11):
     gabarito_inputs[i] = cols[i-1].text_input(f"Q{i}", padrao[i-1], key=f"q{i}", max_chars=1).upper()
 
+# Seção de Matemática
 st.markdown("#### 📐 Matemática (Questões 11 a 20)")
 cols2 = st.columns(10)
 for i in range(11, 21):
@@ -113,70 +117,53 @@ for i in range(11, 21):
 
 st.divider()
 
+# Upload
 st.subheader("2. Envio de Arquivos")
 arquivos_pdf = st.file_uploader("Arraste aqui o(s) PDF(s) digitalizado(s)", type=["pdf"], accept_multiple_files=True)
 
-if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
+if st.button("🚀 Iniciar Correção em Massa", type="primary"):
     if not arquivos_pdf:
         st.warning("Por favor, faça o upload de pelo menos um arquivo PDF.")
     elif not polo_escolhido:
-        st.error("Por favor, preencha o campo 'Polo'.")
+        st.error("Por favor, preencha o campo 'Polo' para gerar o nome do arquivo.")
     else:
-        # --- NOVO: PRÉ-CONTAGEM DE TODAS AS PÁGINAS PARA A BARRA DE PROGRESSO ---
-        total_geral_paginas = 0
-        arquivos_processados = [] # Guardar infos para não repetir leitura de disco
-        
-        with st.spinner("Calculando volume de trabalho..."):
-            for file in arquivos_pdf:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(file.read())
-                    tmp_path = tmp.name
-                    info = pdfinfo_from_path(tmp_path)
-                    total_geral_paginas += info["Pages"]
-                    arquivos_processados.append((tmp_path, file.name, info["Pages"]))
-
         dados_consolidados = []
         num_global = 1
         progress_bar = st.progress(0)
         status_text = st.empty()
 
-        # --- LOOP DE CORREÇÃO REAL ---
-        for tmp_path, nome_original, total_pags_arquivo in arquivos_processados:
-            for p in range(1, total_pags_arquivo + 1):
-                # Atualização da barra: (Gabaritos já feitos) / (Total de todos os arquivos)
-                progresso_atual = (num_global - 1) / total_geral_paginas
-                progress_bar.progress(progresso_atual)
+        for idx, file in enumerate(arquivos_pdf):
+            status_text.text(f"Processando: {file.name}...")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(file.read())
+                tmp_path = tmp.name
                 
-                status_text.text(f"Corrigindo Gabarito Nº {num_global:04d} de {total_geral_paginas}...")
-                
-                # Processamento a 300 DPI página por página
-                pagina_imagem = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
-                img = cv2.cvtColor(np.array(pagina_imagem), cv2.COLOR_RGB2BGR)
-                del pagina_imagem 
-                
-                bloco_e, bloco_d = isolar_blocos_com_protecao(img)
-                resp = {}
-                
-                if bloco_e is not None and bloco_d is not None:
-                    resp.update(ler_bolinhas(bloco_e, 1))
-                    resp.update(ler_bolinhas(bloco_d, 11))
-                    acertos_pt = sum(1 for q in range(1, 11) if resp.get(q) == gabarito_inputs[q])
-                    acertos_mt = sum(1 for q in range(11, 21) if resp.get(q) == gabarito_inputs[q])
-                else:
-                    acertos_pt, acertos_mt = 0, 0
-                    for q in range(1, 21): resp[q] = "ERRO_LEITURA"
+            try:
+                paginas = convert_from_path(tmp_path, dpi=300)
+                for pag in paginas:
+                    img = cv2.cvtColor(np.array(pag), cv2.COLOR_RGB2BGR)
+                    bloco_e, bloco_d = isolar_blocos_com_protecao(img)
+                    resp = {}
+                    
+                    if bloco_e is not None and bloco_d is not None:
+                        resp.update(ler_bolinhas(bloco_e, 1))
+                        resp.update(ler_bolinhas(bloco_d, 11))
+                        acertos_pt = sum(1 for q in range(1, 11) if resp.get(q) == gabarito_inputs[q])
+                        acertos_mt = sum(1 for q in range(11, 21) if resp.get(q) == gabarito_inputs[q])
+                    else:
+                        acertos_pt, acertos_mt = 0, 0
+                        for q in range(1, 21): resp[q] = "ERRO_LEITURA"
 
-                linha = {"Questão/Gabarito": f"Nº {num_global:04d}"}
-                for q in range(1, 21): linha[f"Q{q}"] = resp.get(q)
-                linha["Português"] = acertos_pt
-                linha["Matemática"] = acertos_mt
-                dados_consolidados.append(linha)
-                
-                num_global += 1
-                gc.collect()
-
-        # Finaliza a barra em 100%
-        progress_bar.progress(1.0)
+                    linha = {"Gabarito": f"Nº {num_global:04d}"}
+                    for q in range(1, 21): linha[f"Q{q}"] = resp.get(q)
+                    linha["Português"] = acertos_pt
+                    linha["Matemática"] = acertos_mt
+                    dados_consolidados.append(linha)
+                    num_global += 1
+            except Exception as e:
+                st.error(f"Erro no arquivo {file.name}.")
+            
+            progress_bar.progress((idx + 1) / len(arquivos_pdf))
 
         if dados_consolidados:
             df = pd.DataFrame(dados_consolidados)
@@ -187,17 +174,18 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             wb = load_workbook(output)
             ws = wb.active
 
-            # Linha do Gabarito Esperado
+            # --- INSERÇÃO DA LINHA DO GABARITO OFICIAL (LINHA 2) ---
             ws.insert_rows(2)
-            ws.cell(row=2, column=1).value = "Gabarito Correto"
-            ws.cell(row=2, column=1).font = Font(bold=True)
+            ws.cell(row=2, column=1).value = "GABARITO ESPERADO"
+            ws.cell(row=2, column=1).font = Font(bold=True, color="0000FF")
+            
             for q in range(1, 21):
                 cell = ws.cell(row=2, column=q+1)
                 cell.value = gabarito_inputs[q]
                 cell.alignment = Alignment(horizontal="center")
                 cell.font = Font(bold=True)
 
-            # Pintura de Células
+            # --- FORMATAÇÃO DAS CORES ( COMEÇA NA LINHA 3) ---
             COR_ACERTO = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
             COR_ERRO = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
             COR_ANULADA = PatternFill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
@@ -208,17 +196,22 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                     valor = celula.value
                     questao_num = col - 1
                     esperado = gabarito_inputs[questao_num]
-                    if valor == esperado: celula.fill = COR_ACERTO
-                    elif valor == "ANULADA": celula.fill = COR_ANULADA
-                    elif valor not in ["EM BRANCO", "ERRO_LEITURA"]: celula.fill = COR_ERRO
+                    
+                    if valor == esperado:
+                        celula.fill = COR_ACERTO
+                    elif valor == "ANULADA":
+                        celula.fill = COR_ANULADA
+                    elif valor not in ["EM BRANCO", "ERRO_LEITURA"]:
+                        celula.fill = COR_ERRO
 
             final_output = io.BytesIO()
             wb.save(final_output)
             final_output.seek(0)
 
+            # Nome dinâmico do arquivo
             nome_arquivo_final = f"Resultados - {serie_escolhida} - {polo_escolhido}.xlsx"
-            status_text.empty()
-            st.success(f"✅ Concluído! O Super Perseu corrigiu {len(dados_consolidados)} gabaritos com sucesso.")
+
+            st.success(f"✅ Concluído! O Super Perseu corrigiu o(s) gabarito(s) da(s) {num_global - 1} prova(s) do Polo {polo_escolhido}.")
             st.download_button(
                 label="📥 Baixar Planilha de Resultados",
                 data=final_output,
