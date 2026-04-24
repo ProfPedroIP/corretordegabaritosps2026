@@ -65,10 +65,10 @@ def isolar_blocos_com_protecao(imagem_cv):
 
 def ler_bolinhas(img_bloco, q_ini):
     cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
-    _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
+    _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
-    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.27
+    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.30
 
     for i in range(10): 
         marcadas = []
