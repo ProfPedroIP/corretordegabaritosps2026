@@ -78,7 +78,7 @@ def ler_bolinhas(img_bloco, q_ini):
         limite_dinamico = 0.30 # Seu limite padrão de 30%
 
     cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
-    # Sensibilidade de cor em 225
+    # Sensibilidade de cor em 225 conforme solicitado
     _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
     
     respostas = {}
@@ -100,7 +100,7 @@ def ler_bolinhas(img_bloco, q_ini):
 
 # --- INTERFACE ---
 st.title("Correção Automática de Gabaritos")
-st.markdown("Sistema de correção do Processo Seletivo 2026 do **Instituto Ponte**")
+st.markdown("Sistema de correção oficial do Processo Seletivo 2026 do **Instituto Ponte**")
 
 with st.expander("📖 Instruções de Uso", expanded=True):
     st.write("1. Use o **Adobe Scan** para gerar os PDFs.")
@@ -219,3 +219,11 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 type="primary"
             )
+
+# --- RODAPÉ COM DATA E HORA ---
+st.markdown("---")
+fuso_br = pytz.timezone('America/Sao_Paulo')
+agora = datetime.now(fuso_br)
+data_hora_texto = agora.strftime("%d/%m/%Y às %H:%M:%S")
+st.caption(f"🚀 **Super Perseu v1.3.0** | Instituto Ponte")
+st.caption(f"📅 Relatório gerado em: {data_hora_texto}")
