@@ -2,11 +2,12 @@ import streamlit as st
 import cv2
 import numpy as np
 import pandas as pd
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, pdfinfo_from_path # Adicionado pdfinfo
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import tempfile
 import io
+import gc # Para limpeza de memória
 
 # Configuração da página Web
 st.set_page_config(page_title="Corretor de gabaritos", page_icon="📝", layout="centered")
@@ -64,10 +65,12 @@ def isolar_blocos_com_protecao(imagem_cv):
 
 def ler_bolinhas(img_bloco, q_ini):
     cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
-    _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
+    # Sensibilidade de cor ajustada para 225 (mais sensível a tons claros)
+    _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
-    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.35
+    # Limite de preenchimento ajustado para 0.27 (27%)
+    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.27
 
     for i in range(10): 
         marcadas = []
@@ -133,15 +136,28 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
         status_text = st.empty()
 
         for idx, file in enumerate(arquivos_pdf):
-            status_text.text(f"Processando: {file.name}...")
+            status_text.text(f"Abrindo arquivo: {file.name}...")
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 tmp.write(file.read())
                 tmp_path = tmp.name
                 
             try:
-                paginas = convert_from_path(tmp_path, dpi=300)
-                for pag in paginas:
-                    img = cv2.cvtColor(np.array(pag), cv2.COLOR_RGB2BGR)
+                # Descobre o total de páginas para processar uma a uma
+                info = pdfinfo_from_path(tmp_path)
+                total_paginas = info["Pages"]
+
+                for p in range(1, total_paginas + 1):
+                    # Processamento Página por Página para economizar RAM
+                    status_text.text(f"Corrigindo Gabarito Nº {num_global:04d} (Pág {p}/{total_paginas}) de {file.name}")
+                    
+                    # Carrega apenas a página atual com DPI ajustado para estabilidade
+                    pagina_imagem = convert_from_path(tmp_path, dpi=225, first_page=p, last_page=p)[0]
+                    
+                    img = cv2.cvtColor(np.array(pagina_imagem), cv2.COLOR_RGB2BGR)
+                    
+                    # Limpa a imagem da memória RAM assim que converter
+                    del pagina_imagem 
+                    
                     bloco_e, bloco_d = isolar_blocos_com_protecao(img)
                     resp = {}
                     
@@ -160,8 +176,12 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
                     linha["Matemática"] = acertos_mt
                     dados_consolidados.append(linha)
                     num_global += 1
+                    
+                    # Coleta de lixo da memória
+                    gc.collect()
+
             except Exception as e:
-                st.error(f"Erro no arquivo {file.name}.")
+                st.error(f"Erro no arquivo {file.name}: {e}")
             
             progress_bar.progress((idx + 1) / len(arquivos_pdf))
 
@@ -211,6 +231,7 @@ if st.button("🚀 Executar Correção dos Gabaritos", type="primary"):
             # Nome dinâmico do arquivo
             nome_arquivo_final = f"Resultados - {serie_escolhida} - {polo_escolhido}.xlsx"
 
+            status_text.empty()
             st.success(f"✅ Concluído! O Super Perseu corrigiu o(s) gabarito(s) da(s) {num_global - 1} prova(s) do Polo {polo_escolhido}.")
             st.download_button(
                 label="📥 Baixar Planilha de Resultados",
