@@ -4,3 +4,4 @@ pdf2image
 pandas
 numpy
 openpyxl
+pytz
