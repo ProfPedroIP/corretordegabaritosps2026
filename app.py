@@ -82,7 +82,7 @@ def ler_bolinhas(img_bloco, q_ini):
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
     # 3. Limite de 25% (0.25): Equilíbrio ideal para 300 DPI
-    limite = 0.18
+    limite = 0.25
 
     for i in range(10): 
         marcadas = []
