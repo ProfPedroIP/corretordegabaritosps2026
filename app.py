@@ -146,7 +146,7 @@ if st.button("🚀 Iniciar Correção", type="primary"):
             final = io.BytesIO()
             wb.save(final)
             st.success(f"Finalizado! {num_global-1} gabaritos corrigidos.")
-            st.download_button("📥 Baixar Planilha", final.getvalue(), f"Resultados_{polo}.xlsx", type="primary")
+            st.download_button("📥 Baixar Planilha", final.getvalue(), f"Resultados_{polo}_{serie}.xlsx", type="primary")
 
 st.markdown("---")
 st.caption(f"Super Perseu | {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M')}")
