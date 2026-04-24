@@ -12,7 +12,6 @@ import gc
 # Configuração da página Web
 st.set_page_config(page_title="SCA - Instituto Ponte", page_icon="📝", layout="centered")
 
-# --- EXIBIÇÃO DA LOGO CENTRALIZADA ---
 URL_LOGO = "https://www.institutoponte.org.br/wp-content/uploads/2025/02/Logo-Instituto-Ponto.png"
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
@@ -23,13 +22,13 @@ def isolar_blocos_com_protecao(imagem_cv):
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
     
-    # Margem de área elástica para evitar ERRO_LEITURA
-    area_min, area_max = 800, 1800 
+    # Margem de área elástica para evitar 
+    area_min, area_max = 900, 1500
     
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
     
-    # Sensibilidade das âncoras (180 para detectar mesmo em impressões claras)
+    # Sensibilidade das âncoras
     _, binario = cv2.threshold(desfoque, 180, 255, cv2.THRESH_BINARY_INV) 
     
     contornos, _ = cv2.findContours(binario, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -74,15 +73,15 @@ def ler_bolinhas(img_bloco, q_ini):
     """Analisa o preenchimento das alternativas"""
     cinza = cv2.cvtColor(img_bloco, cv2.COLOR_BGR2GRAY)
     
-    # SENSIBILIDADE DA BOLINHA: 225 (Conforme solicitado)
-    _, binario = cv2.threshold(cinza, 225, 255, cv2.THRESH_BINARY_INV)
+    # SENSIBILIDADE DA BOLINHA:
+    _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
     
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
-    # LIMITE DE PREENCHIMENTO: 0.35 (Conforme solicitado)
-    limite = 0.35 
+    # LIMITE DE PREENCHIMENTO:
+    limite = 0.33
 
     for i in range(10): 
         marcadas = []
@@ -97,7 +96,7 @@ def ler_bolinhas(img_bloco, q_ini):
         else: respostas[q_ini+i] = marcadas[0]
     return respostas
 
-# --- INTERFACE ---
+# INTERFACE
 st.title("Correção Automática de Gabaritos")
 st.markdown("Sistema de correção oficial do Processo Seletivo 2026 do **Instituto Ponte**")
 
