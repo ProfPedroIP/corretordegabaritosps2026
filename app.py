@@ -89,7 +89,7 @@ def ler_bolinhas(img_bloco, q_ini):
     xi, yi, px, py, raio = 89, 78, 110, 104, 31
     
     # 5. Limite
-    limite = 0.27
+    limite = 0.30
 
     for i in range(10): 
         marcadas = []
