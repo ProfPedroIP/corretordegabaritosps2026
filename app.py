@@ -2,11 +2,12 @@ import streamlit as st
 import cv2
 import numpy as np
 import pandas as pd
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, pdfinfo_from_path
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import tempfile
 import io
+import gc
 
 # Configuração da página Web
 st.set_page_config(page_title="Corretor de gabaritos", page_icon="📝", layout="centered")
@@ -67,7 +68,7 @@ def ler_bolinhas(img_bloco, q_ini):
     _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
-    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.35
+    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.33
 
     for i in range(10): 
         marcadas = []
@@ -132,16 +133,38 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
         progress_bar = st.progress(0)
         status_text = st.empty()
 
-        for idx, file in enumerate(arquivos_pdf):
-            status_text.text(f"Processando: {file.name}...")
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                tmp.write(file.read())
-                tmp_path = tmp.name
-                
-            try:
-                paginas = convert_from_path(tmp_path, dpi=300)
-                for pag in paginas:
-                    img = cv2.cvtColor(np.array(pag), cv2.COLOR_RGB2BGR)
+        # --- PRÉ-CONTAGEM DE PÁGINAS ---
+        total_geral_paginas = 0
+        arquivos_processados = []
+        
+        with st.spinner("Calculando volume de trabalho..."):
+            for file in arquivos_pdf:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(file.read())
+                    tmp_path = tmp.name
+                    try:
+                        info = pdfinfo_from_path(tmp_path)
+                        total_geral_paginas += info["Pages"]
+                        arquivos_processados.append((tmp_path, file.name, info["Pages"]))
+                    except Exception as e:
+                        st.error(f"Erro ao ler informações do arquivo {file.name}.")
+
+        # --- PROCESSAMENTO PÁGINA A PÁGINA ---
+        for tmp_path, nome_original, total_pags_arquivo in arquivos_processados:
+            for p in range(1, total_pags_arquivo + 1):
+                try:
+                    if total_geral_paginas > 0:
+                        progress_bar.progress((num_global - 1) / total_geral_paginas)
+                    
+                    status_text.text(f"Corrigindo Gabarito Nº {num_global:04d} de {total_geral_paginas} (Arquivo: {nome_original})...")
+                    
+                    # Carrega apenas a página atual
+                    pagina_atual = convert_from_path(tmp_path, dpi=300, first_page=p, last_page=p)[0]
+                    img = cv2.cvtColor(np.array(pagina_atual), cv2.COLOR_RGB2BGR)
+                    
+                    # Limpa a página da memória RAM imediatamente após converter
+                    del pagina_atual 
+                    
                     bloco_e, bloco_d = isolar_blocos_com_protecao(img)
                     resp = {}
                     
@@ -158,12 +181,17 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
                     for q in range(1, 21): linha[f"Q{q}"] = resp.get(q)
                     linha["Português"] = acertos_pt
                     linha["Matemática"] = acertos_mt
+                    
                     dados_consolidados.append(linha)
                     num_global += 1
-            except Exception as e:
-                st.error(f"Erro no arquivo {file.name}.")
-            
-            progress_bar.progress((idx + 1) / len(arquivos_pdf))
+                    
+                    # Força o Python a limpar lixo da memória
+                    gc.collect()
+
+                except Exception as e:
+                    st.error(f"Erro na página {p} do arquivo {nome_original}: {e}")
+        
+        progress_bar.progress(1.0)
 
         if dados_consolidados:
             df = pd.DataFrame(dados_consolidados)
@@ -211,7 +239,8 @@ if st.button("🚀 Iniciar Correção em Massa", type="primary"):
             # Nome dinâmico do arquivo
             nome_arquivo_final = f"Resultados - {serie_escolhida} - {polo_escolhido}.xlsx"
 
-            st.success(f"✅ Concluído! O Super Perseu corrigiu o(s) gabarito(s) da(s) {num_global - 1} prova(s) do Polo {polo_escolhido}.")
+            status_text.empty()
+            st.success(f"✅ Concluído! Corrigido o(s) gabarito(s) da(s) {num_global - 1} prova(s) do Polo {polo_escolhido}.")
             st.download_button(
                 label="📥 Baixar Planilha de Resultados",
                 data=final_output,
