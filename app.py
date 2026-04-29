@@ -68,7 +68,7 @@ def ler_bolinhas(img_bloco, q_ini):
     _, binario = cv2.threshold(cinza, 210, 255, cv2.THRESH_BINARY_INV)
     respostas = {}
     alts = ['A', 'B', 'C', 'D', 'E']
-    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.33
+    xi, yi, px, py, raio, limite = 89, 78, 110, 104, 31, 0.50
 
     for i in range(10): 
         marcadas = []
