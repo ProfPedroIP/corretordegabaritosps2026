@@ -21,7 +21,7 @@ with col2:
 def isolar_blocos_com_protecao(imagem_cv):
     altura_total, largura_total = imagem_cv.shape[:2]
     y_limite_superior = int(altura_total * 0.30)
-    area_min, area_max = 800, 1600
+    area_min, area_max = 800, 2000
     
     cinza = cv2.cvtColor(imagem_cv, cv2.COLOR_BGR2GRAY)
     desfoque = cv2.GaussianBlur(cinza, (5, 5), 0)
